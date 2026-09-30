@@ -3,6 +3,8 @@ const fs = require('fs/promises')
 const dotenv = require('dotenv')
 const path = require('path')
 
+const cache={};
+const itemCache = {};
 const app = express()
 dotenv.config()
 const filePath = path.join(__dirname,"data.json")
@@ -18,41 +20,65 @@ async function readFile() {
 }
 
 
+async function readFileDelay() {
+    try {
+        await new Promise((resolve) => {
+            setTimeout(resolve, 1500);
+        });
+
+        return await readFile();
+
+    } catch (err) {
+        console.log(err);
+    }
+}
+
 app.get('/products', async (req,res) => {
-    let products = await readFile();
-    res.json(products)
+    try{
+        let key = req.url;
+        let value = cache[key];
+
+        if (value){ //cache hit
+            res.set("X-cache","HIT")
+            res.json(value)
+            return
+        }
+
+        let products = await readFileDelay();
+        res.json(products)
+        cache[key] = products;
+        res.set("X-cache","MISS")
+    }catch(err){
+        console.log(err)
+    }
+   
 })
 
 
 app.get('/products/:id', async (req,res) => {
     try{
+
         let {id} = req.params
         id = Number(id)
         
-        let products = await readFile()
+        let products = await readFileDelay()
         
-        if (id < products.length ){
-            res.json(products[id])
-        }else{
-            res.json({"error":"Id Not Found"})
+        let product = products.find((item) => item.id===id)
+        if (product){
+            res.json(product)
+            return
         }
 
     }catch(err){
         res.status(500).send("Server Error")
     }
     
-    // if (id < products.length ){
-    //     res.json(products[id])
-    // }else{
-    //     res.json({"error":"ID Not Found"})
-    // }
-    
 })
 
 
 
 
-const port = process.env.PORT
+const port = process.env.PORT || 3005
 app.listen(port, () => {
     console.log(`Server running http://localhost:${port}/`)
 })
