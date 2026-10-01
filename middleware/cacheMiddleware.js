@@ -52,7 +52,21 @@ const itemCacheMiddleware = (req, res, next) => {
     next();
 };
 
+const clearCache = (id) => {
+    for (const key in cache) {
+        delete cache[key];
+    }
+    if (id !== undefined) {
+        delete itemCache[id];
+    } else {
+        for (const key in itemCache) {
+            delete itemCache[key];
+        }
+    }
+};
+
 module.exports = {
     cacheMiddleware,
-    itemCacheMiddleware
+    itemCacheMiddleware,
+    clearCache
 };
